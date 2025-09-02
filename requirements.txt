@@ -1,0 +1,11 @@
+pandas
+numpy
+scikit-learn
+scikit-survival
+lifelines
+lightgbm
+fastapi
+uvicorn[standard]
+pydantic
+joblib
+pyyaml
