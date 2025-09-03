@@ -3,6 +3,7 @@ import numpy as np
 import joblib
 from typing import List
 import logging
+from models.rsf_model import RSFModel
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +15,10 @@ class SurvivalPredictionService:
         self._initialize_encoder()
 
     def _load_model(self, model_path: str):
-        """Load the trained RSF model"""
+        """Load the trained RSF model using the RSFModel class's static method"""
         try:
-            model = joblib.load(model_path)
+            # Use the static load method from RSFModel for robust loading and validation
+            model = RSFModel.load(model_path)
             logger.info(f"Model loaded successfully from {model_path}")
             return model
         except Exception as e:
@@ -78,13 +80,17 @@ class SurvivalPredictionService:
         # One-hot encode categorical variables
         df_encoded = pd.get_dummies(df, drop_first=True)
 
-        # Ensure all training columns are present
-        for col in self.training_columns:
-            if col not in df_encoded.columns:
-                df_encoded[col] = 0
+        # FIXED: Efficiently add missing columns using concat instead of repeated assignment
+        missing_columns = [col for col in self.training_columns if col not in df_encoded.columns]
 
-        # Reorder columns to match training
-        df_encoded = df_encoded[self.training_columns]
+        if missing_columns:
+            # Create all missing columns at once with zeros
+            missing_data = pd.DataFrame(0, index=df_encoded.index, columns=missing_columns)
+            # Concatenate all at once instead of repeated insertion
+            df_encoded = pd.concat([df_encoded, missing_data], axis=1)
+
+        # Reorder columns to match training - this is more efficient than multiple operations
+        df_encoded = df_encoded[self.training_columns].copy()  # .copy() defragments the DataFrame
 
         return df_encoded
 
@@ -93,6 +99,10 @@ class SurvivalPredictionService:
         try:
             # Preprocess the request
             features = self._preprocess_request(request_data)
+
+            # Check if model has event_times_ attribute (fix for the error)
+            if not hasattr(self.model, 'event_times_'):
+                raise ValueError("Model appears to be untrained. Missing event_times_ attribute.")
 
             # Get survival function
             survival_func = self.model.predict_survival_function(features, return_array=True)

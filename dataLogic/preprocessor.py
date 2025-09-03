@@ -1,7 +1,7 @@
 import pandas as pd
 from sksurv.util import Surv
 from config import FEATURES, CUTOFF_DATE
-
+import numpy as np
 
 class DataPreprocessor:
     """Handles data preprocessing for survival analysis."""
@@ -65,12 +65,16 @@ class DataPreprocessor:
         """Create survival analysis target array."""
         event_mask = df['Lead_Time'].notna()
         observed_time = df['Censoring_Time']
-        return Surv.from_arrays(event=event_mask, time=observed_time)
+        return np.array(list(zip(event_mask, observed_time)),
+                        dtype=[("event", bool), ("duration", float)])
 
     def _prepare_features(self, df):
         """Prepare features for modeling."""
         X = df[FEATURES]
         X_encoded = pd.get_dummies(X, drop_first=True)
+
+        # Ensure the index of X_encoded is the same as the original DataFrame
+        X_encoded = X_encoded.set_index(df.index)
 
         # Store training columns for consistency in prediction
         self.training_columns = X_encoded.columns.tolist()

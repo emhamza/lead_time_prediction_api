@@ -1,16 +1,15 @@
-#configration constants
+# config.py
 import pandas as pd
 import os
 
-# Base directory
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Base directory for the project
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # File paths
-DATA_FILE = os.path.join(BASE_DIR, "data", "generated_orders_dataset.csv")
-MODEL_FILE = os.path.join(BASE_DIR, "random_survival_forest.joblib")
-TRAINING_COLUMNS_FILE = os.path.join(BASE_DIR, "training_columns.joblib")
-TEST_DATA_FILE = os.path.join(BASE_DIR, "test.csv")
-
+DATA_FILE = os.path.join(PROJECT_ROOT, "generated_orders_dataset.csv")
+MODEL_FILE = os.path.join(PROJECT_ROOT, "random_survival_forest.joblib")
+TRAINING_COLUMNS_FILE = os.path.join(PROJECT_ROOT, "training_columns.joblib")
+TEST_DATA_FILE = os.path.join(PROJECT_ROOT, "test.csv")
 
 # Model parameters
 RSF_PARAMS = {
@@ -24,6 +23,7 @@ RSF_PARAMS = {
 CUTOFF_DATE = pd.Timestamp('2025-04-01')
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
+
 
 # Features list
 FEATURES = [

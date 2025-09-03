@@ -1,8 +1,8 @@
 from functools import lru_cache
 from services.prediction import SurvivalPredictionService
-from config.settings import settings
+from configApi.settings import settings
 
-@lru_cache()
+# @lru_cache()
 def get_prediction_service() -> SurvivalPredictionService:
     """Get the prediction service (singleton)"""
     return SurvivalPredictionService(

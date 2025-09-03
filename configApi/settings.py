@@ -1,6 +1,7 @@
 import os
 from pydantic_settings import BaseSettings
 from pydantic import Field
+from config import MODEL_FILE, TRAINING_COLUMNS_FILE
 
 
 class Settings(BaseSettings):
@@ -11,11 +12,11 @@ class Settings(BaseSettings):
     API_VERSION: str = Field(default="0.1.0", description="API version")
 
     # Model paths
-    MODEL_PATH: str = Field(default="random_survival_forest.joblib", description="Path to trained model")
-    TRAINING_COLUMNS_PATH: str = Field(default="training_columns.joblib", description="Path to training columns")
+    MODEL_PATH: str = MODEL_FILE
+    TRAINING_COLUMNS_PATH: str = TRAINING_COLUMNS_FILE
 
     # Server settings
-    HOST: str = Field(default="0.0.0.0", description="Server host")
+    HOST: str = Field(default="127.0.0.1", description="Server host")
     PORT: int = Field(default=8000, description="Server port")
     DEBUG: bool = Field(default=False, description="Debug mode")
 

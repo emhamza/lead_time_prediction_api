@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional
-import pandas as pd
+from typing import List
 from datetime import datetime
 
 class SurvivalPredictionRequest(BaseModel):
