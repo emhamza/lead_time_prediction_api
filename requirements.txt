@@ -1,6 +1,6 @@
 pandas
 numpy
-scikit-learn
+scikit-learn==1.7
 scikit-survival
 lifelines
 lightgbm
@@ -9,3 +9,6 @@ uvicorn[standard]
 pydantic
 joblib
 pyyaml
+loguru
+pydantic-settings
+requests
