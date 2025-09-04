@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from config import FEATURES, CUTOFF_DATE
 from sksurv.util import Surv
 
@@ -11,44 +10,23 @@ class DataPreprocessor:
 
     def preprocess_data(self, df):
         """Preprocess the data for survival analysis."""
-        print("=" * 60)
-        print("📌 [Preprocess] Starting preprocessing pipeline")
-        print(f"Input dataframe shape: {df.shape}")
-        print(f"Columns: {list(df.columns)}")
 
         # Drop duplicates
         df = df.drop_duplicates()
-        print(f"After dropping duplicates: {df.shape}")
 
         # Convert datetime columns
-        print("📌 [Preprocess] Converting datetime features...")
         df = self._process_datetime_features(df)
-        print("Datetime features processed.")
-        print(f"Sample datetime values:\n{df[['Order_Creation_DateTime','Acknowledgement_DateTime']].head()}")
 
         # Create derived features
-        print("📌 [Preprocess] Creating derived features...")
         df = self._create_derived_features(df)
-        print("Derived features created.")
-        print(f"Columns after feature engineering: {list(df.columns)}")
-        print(f"Sample derived features:\n{df[['Time_to_Acknowledge','is_low_lead_time','Censoring_Time']].head()}")
 
         # Create survival target
-        print("📌 [Preprocess] Creating survival target...")
         y = self._create_survival_target(df)
-        print("Survival target created.")
-        print(f"y dtype names: {y.dtype.names}, shape: {y.shape}")
-        print(f"y sample: {y[:5]}")
 
         # Prepare features
-        print("📌 [Preprocess] Preparing features...")
         X = self._prepare_features(df)
-        print("Features prepared.")
-        print(f"X shape: {X.shape}, columns: {len(X.columns)}")
-        print(f"X sample:\n{X.head()}")
+        print("  ✅ Data Preprocessing completed.")
 
-        print("✅ [Preprocess] Preprocessing pipeline complete.")
-        print("=" * 60)
 
         return X, y, df
 
@@ -92,7 +70,6 @@ class DataPreprocessor:
 
     def _create_survival_target(self, df):
         """Create survival analysis target array (structured dtype)."""
-        print("  ➡️  Constructing survival target array with Surv...")
         event_mask = df['Lead_Time'].notna()
         observed_time = df['Censoring_Time']
 
@@ -105,7 +82,6 @@ class DataPreprocessor:
 
     def _prepare_features(self, df):
         """Prepare features for modeling."""
-        print("  ➡️  Encoding features...")
         X = df[FEATURES]
         X_encoded = pd.get_dummies(X, drop_first=True)
 
@@ -115,5 +91,5 @@ class DataPreprocessor:
         # Store training columns for consistency in prediction
         self.training_columns = X_encoded.columns.tolist()
 
-        print(f"  ✅ Features encoded. Total features: {len(self.training_columns)}")
+        print(f"  ✅ Features encoded.")
         return X_encoded

@@ -1,3 +1,5 @@
+#this file is the bridge between the http request and ML model
+
 from fastapi import APIRouter, HTTPException, Depends
 import time
 from services.prediction import SurvivalPredictionService

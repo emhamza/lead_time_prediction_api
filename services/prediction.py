@@ -10,15 +10,12 @@ logger = logging.getLogger(__name__)
 
 class SurvivalPredictionService:
     def __init__(self, model_path: str, training_columns_path: str):
-        print("[Init] Initializing SurvivalPredictionService...")
         self.model = self._load_model(model_path)
         self.training_columns = self._load_training_columns(training_columns_path)
         self._initialize_encoder()
-        print("[Init] Initialization complete ✅")
 
     def _load_model(self, model_path: str):
         """Load the trained RSF model"""
-        print(f"[Load Model] Attempting to load model from {model_path}")
         try:
             model = RSFModel.load(model_path)
             print("[Load Model] Model loaded successfully ✅")
@@ -31,7 +28,6 @@ class SurvivalPredictionService:
 
     def _load_training_columns(self, training_columns_path: str):
         """Load the training columns"""
-        print(f"[Load Columns] Attempting to load training columns from {training_columns_path}")
         try:
             columns = joblib.load(training_columns_path)
             print(f"[Load Columns] Loaded {len(columns)} training columns ✅")
@@ -56,7 +52,6 @@ class SurvivalPredictionService:
                 'Time_to_Acknowledge', 'is_low_lead_time'
             ]
         ]
-        print(f"[Encoder] Found {len(self.categorical_columns)} categorical columns")
         print("[Encoder] Encoder initialized ✅")
 
     def _preprocess_request(self, request_data: dict) -> pd.DataFrame:
