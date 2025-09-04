@@ -6,7 +6,7 @@ import os
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # File paths
-DATA_FILE = os.path.join(PROJECT_ROOT, "generated_orders_dataset.csv")
+DATA_FILE = os.path.join(PROJECT_ROOT, "dataset_with_vendors.csv")
 MODEL_FILE = os.path.join(PROJECT_ROOT, "trained_model.joblib")
 TRAINING_COLUMNS_FILE = os.path.join(PROJECT_ROOT, "training_columns.joblib")
 TEST_DATA_FILE = os.path.join(PROJECT_ROOT, "test.csv")
