@@ -5,6 +5,7 @@ from models.rsf_model import RSFModel
 from utils.evaluation import evaluate_model
 from config import TEST_SIZE, RANDOM_STATE
 import numpy as np
+from dataLogic.vendor_utils import assign_vendor_ids
 import pandas as pd
 import sklearn
 import sksurv
@@ -14,6 +15,10 @@ def train_survival_model():
 
     # STEP 1: Load data
     df = load_data()
+
+    # Step 2: Assign vendor IDs
+    # df = assign_vendor_ids(df)
+    # df.to_csv('dataset_with_vendors.csv', index=False)
 
     # STEP 2: Preprocess
     preprocessor = DataPreprocessor()
