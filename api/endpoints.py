@@ -1,69 +1,32 @@
-#this file is the bridge between the http request and ML model
-
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 import time
-from services.prediction import SurvivalPredictionService
-from api.models import (
-    SurvivalPredictionRequest,
-    SurvivalPredictionResponse,
-    BatchPredictionRequest,
-    BatchPredictionResponse
-)
-from api.dependencies import get_prediction_service
+from services.training import train_vendor_model
 
-router = APIRouter()
+router=APIRouter()
 
 
-@router.post("/predict", response_model=SurvivalPredictionResponse)
-async def predict_survival(
-        request: SurvivalPredictionRequest,
-        prediction_service: SurvivalPredictionService = Depends(get_prediction_service)
-):
+#new api endpoint
+@router.post("/train/{vendor_id}")
+async def train_vendor(vendor_id: str):
     """
-    Predict survival percentiles and survival curve for a single order.
-
-    Returns:
-    - p50: 50th percentile survival time
-    - p90: 90th percentile survival time
-    - survival_curve: List of time-probability points
-    - risk_score: Relative risk assessment
-    - event_probability: Probability of event occurring
-    """
-    try:
-        result = prediction_service.predict_survival(request.dict())
-        return SurvivalPredictionResponse(**result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
-
-
-@router.post("/predict/batch", response_model=BatchPredictionResponse)
-async def predict_batch_survival(
-        batch_request: BatchPredictionRequest,
-        prediction_service: SurvivalPredictionService = Depends(get_prediction_service)
-):
-    """
-    Predict survival for multiple orders in batch mode.
+    Train a survival model for a specific vendor_id.
+    Saves the trained model and training columns.
     """
     start_time = time.time()
-
     try:
-        predictions = []
-        for request in batch_request.requests:
-            result = prediction_service.predict_survival(request.dict())
-            predictions.append(SurvivalPredictionResponse(**result))
+        model_path, cols_path, n_rows = train_vendor_model(vendor_id)
 
         processing_time = time.time() - start_time
-
-        return BatchPredictionResponse(
-            predictions=predictions,
-            processing_time=processing_time,
-            total_processed=len(predictions)
-        )
+        return {
+            "status": "success",
+            "vendor_id": vendor_id,
+            "rows_used": n_rows,
+            "model_path": model_path,
+            "training_columns_path": cols_path,
+            "processing_time": processing_time,
+            "message": f"Training completed for vendor {vendor_id}"
+        }
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Batch prediction failed: {str(e)}")
-
-
-@router.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "survival-analysis-api"}
+        raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
