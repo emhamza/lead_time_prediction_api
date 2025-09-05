@@ -1,9 +1,12 @@
 # Ignore data files and artifacts
 data/
 artifacts/
+.venv/
 Predictions/
 *.csv
 *.joblib
 *.pkl
 .env
 .idea/
+__pycache__
+commands.txt
