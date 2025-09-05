@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.endpoints import router as api_router
+from api.auth_endpoints import router as auth_router
 from utils.logging import setup_logging
 
 # ----------------------------
@@ -14,7 +15,8 @@ setup_logging()
 app = FastAPI(
     title="Survival Analysis API",
     description="API for predicting survival probabilities and training vendor-specific models",
-    version="0.2.0"
+    version="0.2.0",
+    swagger_ui_oauth2_redirect_url="/docs/oauth2-redirect",
 )
 
 # ----------------------------
@@ -31,6 +33,7 @@ app.add_middleware(
 # ----------------------------
 # Include API routers
 # ----------------------------
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(api_router, prefix="/api/v1", tags=["ML"])
 
 # ----------------------------
