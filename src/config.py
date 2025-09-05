@@ -3,10 +3,10 @@ import pandas as pd
 import os
 
 # Base directory for the project
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # File paths
-DATA_FILE = os.path.join(PROJECT_ROOT, "dataset_with_vendors.csv")
+DATA_FILE = os.path.join(PROJECT_ROOT, "data", "dataset_with_vendors.csv")
 
 
 # Model parameters

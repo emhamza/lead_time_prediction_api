@@ -10,3 +10,4 @@ Predictions/
 .idea/
 __pycache__
 commands.txt
+logs/

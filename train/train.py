@@ -4,9 +4,9 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sksurv.ensemble import RandomSurvivalForest
 
-from dataLogic.loader import load_data, save_training_columns
-from dataLogic.preprocessor import DataPreprocessor
-from config import DATA_FILE
+from src.load import load_data, save_training_columns
+from src.preprocessing import DataPreprocessor
+from src.config import DATA_FILE
 
 def train_vendor_model(vendor_id: str):
     """
@@ -44,9 +44,9 @@ def train_vendor_model(vendor_id: str):
     X, y, processed_df = preprocessor.preprocess_data(vendor_df)
 
     # Save training columns
-    cols_path = f"vendorModels/{vendor_id}_training_column.joblib"
-    os.makedirs("vendorModels", exist_ok=True)
-    save_training_columns(preprocessor.training_columns, cols_path)
+    # cols_path = f"vendorModels/{vendor_id}_training_column.joblib"
+    # os.makedirs("vendorModels", exist_ok=True)
+    # save_training_columns(preprocessor.training_columns, cols_path)
 
     # ----------------------------
     # 4. Train RSF model
@@ -68,8 +68,10 @@ def train_vendor_model(vendor_id: str):
     # ----------------------------
     # 5. Save model
     # ----------------------------
-    model_path = f"vendorModels/{vendor_id}.joblib"
+    model_path = f"artifacts/v1/{vendor_id}.joblib"
+    model_dir = os.path.dirname(model_path)
+    os.makedirs(model_dir, exist_ok=True)
     joblib.dump(rsf, model_path)
     print(f"✅ Model saved: {model_path}")
 
-    return model_path, cols_path, len(vendor_df)
+    return model_path, len(vendor_df)

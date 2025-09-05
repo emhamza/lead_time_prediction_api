@@ -1,6 +1,6 @@
 import pandas as pd
 import joblib
-from config import DATA_FILE
+from src.config import DATA_FILE
 
 def load_data(file_path=DATA_FILE):
     """Load data from CSV file."""

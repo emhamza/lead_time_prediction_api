@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 import time
-from services.training import train_vendor_model
+from train.train import train_vendor_model
 
 router=APIRouter()
 
@@ -14,7 +14,7 @@ async def train_vendor(vendor_id: str):
     """
     start_time = time.time()
     try:
-        model_path, cols_path, n_rows = train_vendor_model(vendor_id)
+        model_path, n_rows = train_vendor_model(vendor_id)
 
         processing_time = time.time() - start_time
         return {
@@ -22,7 +22,7 @@ async def train_vendor(vendor_id: str):
             "vendor_id": vendor_id,
             "rows_used": n_rows,
             "model_path": model_path,
-            "training_columns_path": cols_path,
+            # "training_columns_path": cols_path,
             "processing_time": processing_time,
             "message": f"Training completed for vendor {vendor_id}"
         }

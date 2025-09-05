@@ -1,5 +1,5 @@
 import pandas as pd
-from config import FEATURES, CUTOFF_DATE
+from src.config import FEATURES, CUTOFF_DATE
 from sksurv.util import Surv
 
 class DataPreprocessor:

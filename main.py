@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.endpoints import router as api_router
+from api.v1.api import router as api_router
 from utils.logging import setup_logging
 
 # ----------------------------
@@ -52,6 +52,6 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="127.0.0.1",   # hardcoded host
-        port=8000,          # hardcoded port
+        port=8001,          # hardcoded port
         reload=True         # good for dev, set False in prod
     )
