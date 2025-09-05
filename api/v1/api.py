@@ -1,13 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 import time
 from train.train import train_vendor_model
+from src.auth import get_current_user
 
 router=APIRouter()
 
 
 #new api endpoint
 @router.post("/train/{vendor_id}")
-async def train_vendor(vendor_id: str):
+async def train_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
     """
     Train a survival model for a specific vendor_id.
     Saves the trained model and training columns.

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.v1.api import router as api_router
+from api.v1.auth_endpoints import router as auth_router
 from utils.logging import setup_logging
 
 # ----------------------------
@@ -14,7 +15,8 @@ setup_logging()
 app = FastAPI(
     title="Survival Analysis API",
     description="API for predicting survival probabilities and training vendor-specific models",
-    version="0.2.0"
+    version="0.2.0",
+    swagger_ui_oauth2_redirect_url="/docs/oauth2-redirect",
 )
 
 # ----------------------------
@@ -31,6 +33,7 @@ app.add_middleware(
 # ----------------------------
 # Include API routers
 # ----------------------------
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(api_router, prefix="/api/v1", tags=["ML"])
 
 # ----------------------------
@@ -52,6 +55,6 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="127.0.0.1",   # hardcoded host
-        port=8001,          # hardcoded port
+        port=8000,          # hardcoded port
         reload=True         # good for dev, set False in prod
     )

@@ -12,3 +12,7 @@ pyyaml
 loguru
 pydantic-settings
 requests
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart
+dotenv
