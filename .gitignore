@@ -210,3 +210,4 @@ rsf_model.joblib
 trained_model.joblib
 training_columns.joblib
 dataset_with_vendors.csv
+.env
