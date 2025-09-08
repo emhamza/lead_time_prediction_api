@@ -2,16 +2,16 @@ from fastapi import APIRouter, HTTPException, Depends
 import time
 from train.train import train_vendor_model
 from src.auth import get_current_user
-from fastapi.security import OAuth2PasswordRequestForm
 from src.auth import authenticate_user, create_access_token
 from datetime import timedelta
 from src.schemas import TokenResponse, LoginRequest
+from predict.predict import predict_vendor_model
 
 router=APIRouter()
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login_json(form_data: LoginRequest):
+async def login(form_data: LoginRequest):
     """
     JSON-based login endpoint for custom clients.
     """
@@ -34,7 +34,7 @@ async def train_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
     """
     start_time = time.time()
     try:
-        model_path, n_rows = train_vendor_model(vendor_id)
+        model_path, n_rows, = train_vendor_model(vendor_id)
 
         processing_time = time.time() - start_time
         return {
@@ -49,3 +49,17 @@ async def train_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+@router.post("/pred/{vendor_id}")
+async def predict_vendor(vendor_id: str, user:dict = Depends(get_current_user)):
+    """
+        Predict survival probabilities for a specific vendor_id.
+        Saves predictions in predictions/v1/{vendor_id}.json
+    """
+    try:
+        results = predict_vendor_model(vendor_id)
+        return results
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")

@@ -4,7 +4,7 @@ import os
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DATA_FILE = os.path.join(PROJECT_ROOT, "data", "dataset_with_vendors.csv")
-
+TEST_FILE = os.path.join(PROJECT_ROOT, "data", "consolidated_test.csv")
 
 RSF_PARAMS = {
     'n_estimators': 1000,
