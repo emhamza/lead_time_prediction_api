@@ -1,10 +1,9 @@
 import os
 import joblib
-import pandas as pd
 from sklearn.model_selection import train_test_split
 from sksurv.ensemble import RandomSurvivalForest
 
-from src.load import load_data, save_training_columns
+from src.load import load_data
 from src.preprocessing import DataPreprocessor
 from src.config import DATA_FILE
 
@@ -19,17 +18,11 @@ def train_vendor_model(vendor_id: str):
         n_rows (int): number of rows used for training
     """
 
-    # ----------------------------
-    # 1. Load dataset
-    # ----------------------------
     df = load_data(DATA_FILE)
 
     if "vendor_id" not in df.columns:
         raise ValueError("Dataset does not contain 'vendor_id' column. Please check preprocessing step.")
 
-    # ----------------------------
-    # 2. Filter dataset for vendor_id
-    # ----------------------------
     vendor_df = df[df["vendor_id"] == vendor_id]
 
     if vendor_df.empty:
@@ -37,20 +30,9 @@ def train_vendor_model(vendor_id: str):
 
     print(f"➡️ Training model for vendor_id={vendor_id} | Rows: {len(vendor_df)}")
 
-    # ----------------------------
-    # 3. Preprocess data
-    # ----------------------------
     preprocessor = DataPreprocessor()
     X, y, processed_df = preprocessor.preprocess_data(vendor_df)
 
-    # Save training columns
-    # cols_path = f"vendorModels/{vendor_id}_training_column.joblib"
-    # os.makedirs("vendorModels", exist_ok=True)
-    # save_training_columns(preprocessor.training_columns, cols_path)
-
-    # ----------------------------
-    # 4. Train RSF model
-    # ----------------------------
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     rsf = RandomSurvivalForest(
@@ -65,9 +47,6 @@ def train_vendor_model(vendor_id: str):
     rsf.fit(X_train, y_train)
     print(f"✅ Model trained for vendor {vendor_id}")
 
-    # ----------------------------
-    # 5. Save model
-    # ----------------------------
     model_path = f"artifacts/v1/{vendor_id}.joblib"
     model_dir = os.path.dirname(model_path)
     os.makedirs(model_dir, exist_ok=True)
