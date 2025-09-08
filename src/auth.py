@@ -7,7 +7,6 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-# Secret key for signing JWTs (in production: store in .env)
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable is required")
@@ -16,18 +15,14 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Fake user store (replace with DB later)
-# Using a properly generated hash for "admin123"
 fake_users_db = {
     "admin": {
         "username": "admin",
-        # This hash corresponds to "admin123" - generate a new one if needed
-        "hashed_password": pwd_context.hash("admin123")  # Generate fresh hash each time
+        "hashed_password": pwd_context.hash("admin123")
     }
 }
 
-# tokenUrl must point to our login endpoint
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
 
 
 def verify_password(plain_password, hashed_password):
