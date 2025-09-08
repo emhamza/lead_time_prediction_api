@@ -1,13 +1,18 @@
 import logging
-import sys
-from loguru import logger
+import os
 
-def setup_logging():
-    """Configure logging for the API"""
-    logging.basicConfig(level=logging.INFO)
-    logger.configure(
-        handlers=[
-            {"sink": sys.stdout, "format": "{time} {level} {message}"},
-            {"sink": "logs/api.log", "rotation": "500 MB", "retention": "10 days"}
-        ]
-    )
+LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOG_FILE = os.path.join(LOG_DIR, "app.log")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger("lead_time_prediction")
