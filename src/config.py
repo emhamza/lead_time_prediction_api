@@ -3,6 +3,15 @@ import os
 import mlflow
 from mlflow.tracking import MlflowClient
 from utils.logging import logger
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DATA_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_DATA")
+PRED_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_PRED")
+
+MONGO_URI = os.getenv("MONGO_URI")
+MONGO_DB = os.getenv("MONGO_DB")
 
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

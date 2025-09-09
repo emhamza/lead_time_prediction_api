@@ -42,7 +42,6 @@ async def train_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
             "vendor_id": vendor_id,
             "mlflow_run_id": model_info["mlflow_run_id"],
             "mlflow_model_uri": model_info["mlflow_model_uri"],
-            "local_model_path": model_info["local_model_path"],
             "processing_time": processing_time,
             "message": f"Training completed for vendor {vendor_id}"
         }

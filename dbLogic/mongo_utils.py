@@ -1,13 +1,7 @@
 from datetime import datetime
 import pandas as pd
 from .connect import get_collection
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
-DATA_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_DATA")
-PRED_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_PRED")
+from src.config import DATA_COLLECTION_NAME, PRED_COLLECTION_NAME
 
 def load_dataset_from_mongo(collection_name=DATA_COLLECTION_NAME):
     collection = get_collection(collection_name)
