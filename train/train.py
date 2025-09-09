@@ -3,9 +3,8 @@ import joblib
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sksurv.ensemble import RandomSurvivalForest
-from src.load import load_data
 from src.preprocessing import DataPreprocessor
-from src.config import DATA_FILE
+from dbLogic.connect import load_dataset_from_mongo
 
 
 def train_vendor_model(vendor_id: str):
@@ -18,7 +17,7 @@ def train_vendor_model(vendor_id: str):
         n_rows (int): number of rows used for training
     """
 
-    df = load_data(DATA_FILE)
+    df = load_dataset_from_mongo()
 
     if "vendor_id" not in df.columns:
         raise ValueError("Dataset does not contain 'vendor_id' column. Please check preprocessing step.")
