@@ -1,76 +1,88 @@
-# Survival Analysis API
+# Lead Time Prediction API
 
-This project implements a **Survival Analysis API** for training
-vendor-specific machine learning models.\
-Currently, the focus is on the `/train/{vendor_id}` endpoint, which
-allows you to train a Random Survival Forest (RSF) model for a given
-vendor.
+This project implements a **Survival Analysis API** for training and predicting vendor-specific machine learning models using Random Survival Forest (RSF).
 
-------------------------------------------------------------------------
+---
 
 ## 🚀 Getting Started
 
-### 1. Install dependencies
-
-Make sure you have a working Python environment. Install dependencies
-using:
-
-``` bash
+### Install dependencies
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Run the API
-
-Start the FastAPI application with:
-
-``` bash
+### Run the API
+```bash
 uvicorn main:app --reload
 ```
 
-The API will be available at:
+**API Access:**
+- Swagger Docs: http://127.0.0.1:8000/docs
+- Root Endpoint: http://127.0.0.1:8000/
 
--   Swagger Docs: <http://127.0.0.1:8000/docs>
--   Root Endpoint: <http://127.0.0.1:8000/>
+---
 
-------------------------------------------------------------------------
+## 📌 API Endpoints
 
-## 📌 Current Endpoint
-
-### Train Model
-
+### 1. Train Model
 `POST /api/v1/train/{vendor_id}`
 
-Trains a Random Survival Forest (RSF) model for the given vendor ID.
+Trains an RSF model for the specified vendor.
 
-#### Example Request
-
-``` http
+**Example Request:**
+```http
 POST /api/v1/train/VENDOR_A
 ```
 
-#### Example Response
-
-``` json
+**Example Response:**
+```json
 {
   "status": "success",
-  "vendor_id": "VENDOR_A",
+  "vendor_id": "VENDOR_A", 
   "rows_used": 320,
-  "model_path": "vendorModels/VENDOR_A.joblib",
-  "training_columns_path": "vendorModels/VENDOR_A_columns.joblib"
+  "model_path": "artifacts/v1/VENDOR_A.joblib"
 }
 ```
 
-------------------------------------------------------------------------
+### 2. Predict Survival
+`POST /api/v1/pred/{vendor_id}`
+
+Generates survival predictions for a trained vendor model.
+
+**Example Request:**
+```http
+POST /api/v1/pred/VENDOR_A
+```
+
+**Example Response:**
+```json
+{
+  "predictions": [
+    {
+      "PO_ID": "12345",
+      "p50_survival_time": 45.2,
+      "p90_survival_time": 78.5,
+      "survival_curve": [...],
+      "risk_score": 0.25
+    }
+  ],
+  "summary": {
+    "vendor_id": "VENDOR_A",
+    "total_predictions": 150
+  },
+  "prediction_path": "predictions/v1/VENDOR_A.json"
+}
+```
+
+---
+
 ## 📊 Workflow
 
-1.  Dataset with `vendor_id` column is prepared.\
-2.  `/train/{vendor_id}` endpoint is called.\
-3.  Data is filtered for the vendor.\
-4.  Preprocessing is applied.\
-5.  RSF model is trained & saved.\
-6.  Training columns are saved for future inference.
+1. **Train**: Call `/train/{vendor_id}` to create vendor-specific RSF model
+2. **Predict**: Call `/pred/{vendor_id}` to generate survival predictions with p50/p90 times and curves
+3. **Results**: Predictions saved to `predictions/v1/{vendor_id}.json`
 
-------------------------------------------------------------------------
+---
 
 ## ⚖️ License
 
