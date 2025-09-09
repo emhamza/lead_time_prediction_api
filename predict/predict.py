@@ -55,7 +55,7 @@ def predict_vendor_model(vendor_id: str) -> Dict[str, Any]:
             p90_time = calculate_percentile_survival_time(event_times, survival_probs, 0.1)
 
             survival_curve = [
-                {"time": float(time), "survival_probability": float(prob)}
+                {"time": float(time), "survival_probability": round(float(prob), 2)}
                 for time, prob in zip(event_times, survival_probs)
             ]
 
