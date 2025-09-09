@@ -11,3 +11,7 @@ Predictions/
 __pycache__
 commands.txt
 logs/
+Commands_For_Run_App.txt
+Project_Structure
+mlflow.db
+train_vendor_id.png

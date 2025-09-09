@@ -34,14 +34,15 @@ async def train_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
     """
     start_time = time.time()
     try:
-        model_path, n_rows, = train_vendor_model(vendor_id)
+        model_info = train_vendor_model(vendor_id)  # <-- returns dict now
 
         processing_time = time.time() - start_time
         return {
             "status": "success",
             "vendor_id": vendor_id,
-            "rows_used": n_rows,
-            "model_path": model_path,
+            "mlflow_run_id": model_info["mlflow_run_id"],
+            "mlflow_model_uri": model_info["mlflow_model_uri"],
+            "local_model_path": model_info["local_model_path"],
             "processing_time": processing_time,
             "message": f"Training completed for vendor {vendor_id}"
         }
@@ -49,6 +50,9 @@ async def train_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
+
+
+
 
 @router.post("/pred/{vendor_id}")
 async def predict_vendor(vendor_id: str, user:dict = Depends(get_current_user)):
