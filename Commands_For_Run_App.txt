@@ -1,0 +1,5 @@
+# MLflow UI on port 6001
+mlflow ui --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./artifacts
+
+# FastAPI (your API) on port 8000
+uvicorn main:app --reload --port 8001
