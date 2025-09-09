@@ -1,14 +1,14 @@
-import json
 import os
 import joblib
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, List
+from typing import Dict, Any
 from fastapi import HTTPException
 
 from src.preprocessing import DataPreprocessor
 from src.load import load_data
 from src.config import TEST_FILE
+from dbLogic.mongo_utils import save_prediction_to_mongo
 
 
 def predict_vendor_model(vendor_id: str) -> Dict[str, Any]:
@@ -106,20 +106,13 @@ def predict_vendor_model(vendor_id: str) -> Dict[str, Any]:
             }
         }
 
-        predictions_dir = "predictions/v1"
-        os.makedirs(predictions_dir, exist_ok=True)
-        prediction_path = os.path.join(predictions_dir, f"{vendor_id}.json")
-
-        with open(prediction_path, "w") as f:
-            json.dump(prediction_result, f, indent=4)
-
-        print(f"✅ Predictions completed and saved: {prediction_path}")
+        save_prediction_to_mongo(prediction_result, vendor_id)
+        print(f"✅ Predictions completed and saved")
         print(f"✅ Generated predictions for {len(predictions)} records")
 
         return {
             "predictions": predictions,
             "summary": summary,
-            "prediction_path": prediction_path,
             "status": "success"
         }
 

@@ -1,8 +1,8 @@
 import pandas as pd
 import joblib
-from src.config import DATA_FILE
+from src.config import TEST_FILE
 
-def load_data(file_path=DATA_FILE):
+def load_data(file_path=TEST_FILE):
     """Load data from CSV file."""
     try:
         df = pd.read_csv(file_path)
