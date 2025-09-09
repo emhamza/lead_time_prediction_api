@@ -1,5 +1,4 @@
 import os
-import joblib
 import pandas as pd
 import mlflow
 import mlflow.sklearn
@@ -77,14 +76,6 @@ def train_vendor_model(vendor_id: str):
     print(f"✅ Model trained for vendor {vendor_id}")
 
     # -------------------------
-    # Save locally
-    # -------------------------
-    model_path = f"artifacts/v1/{vendor_id}.joblib"
-    os.makedirs(os.path.dirname(model_path), exist_ok=True)
-    joblib.dump(rsf, model_path)
-    print(f"✅ Model saved locally: {model_path}")
-
-    # -------------------------
     # Log to MLflow
     # -------------------------
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
@@ -107,7 +98,6 @@ def train_vendor_model(vendor_id: str):
         model_info = {
             "mlflow_run_id": run.info.run_id,
             "mlflow_model_uri": f"runs:/{run.info.run_id}/model",
-            "local_model_path": model_path
         }
 
     return model_info
