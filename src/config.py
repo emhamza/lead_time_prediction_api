@@ -1,5 +1,9 @@
 import pandas as pd
 import os
+import mlflow
+from mlflow.tracking import MlflowClient
+from utils.logging import logger
+
 # from pymongo import MongoClient
 #
 # def load_dataset_from_mongo(
@@ -41,3 +45,22 @@ FEATURES = [
     "Acknowledgement_Month", "Acknowledgement_Year", "Time_to_Acknowledge",
     "is_low_lead_time"
 ]
+
+
+# -------------------------
+# ⚡ MLflow Configuration
+# -------------------------
+MLFLOW_TRACKING_URI = f"sqlite:///{os.path.join(PROJECT_ROOT, 'mlflow.db')}"
+MLFLOW_EXPERIMENT_NAME = "LeadTimePrediction"
+
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+
+client = MlflowClient()
+exp = client.get_experiment_by_name(MLFLOW_EXPERIMENT_NAME)
+if exp is None:
+    exp_id = client.create_experiment(MLFLOW_EXPERIMENT_NAME)
+    logger.info(f"✅ Created MLflow experiment: {MLFLOW_EXPERIMENT_NAME} (id={exp_id})")
+else:
+    logger.info(f"ℹ️ MLflow experiment already exists: {MLFLOW_EXPERIMENT_NAME} (id={exp.experiment_id})")
+
+mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)

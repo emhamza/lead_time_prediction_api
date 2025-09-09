@@ -50,6 +50,8 @@ async def train_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
 
+
+
 @router.post("/pred/{vendor_id}")
 async def predict_vendor(vendor_id: str, user:dict = Depends(get_current_user)):
     """
