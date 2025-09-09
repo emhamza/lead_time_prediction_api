@@ -1,12 +1,14 @@
 import pandas as pd
 from src.config import FEATURES, CUTOFF_DATE
 from sksurv.util import Surv
+from sklearn.preprocessing import LabelEncoder
 
 class DataPreprocessor:
     """Handles data preprocessing for survival analysis."""
 
     def __init__(self):
         self.training_columns = None
+        self.label_encoders = {}
 
     def preprocess_data(self, df):
         """Preprocess the data for survival analysis."""
@@ -71,13 +73,15 @@ class DataPreprocessor:
         return y
 
     def _prepare_features(self, df):
-        """Prepare features for modeling."""
-        X = df[FEATURES]
-        X_encoded = pd.get_dummies(X, drop_first=True)
+        """Prepare features for modeling using Label Encoding instead of One-Hot."""
+        X = df[FEATURES].copy()
 
-        X_encoded = X_encoded.set_index(df.index)
+        for col in X.select_dtypes(include=['object', 'category']).columns:
+            le = LabelEncoder()
+            X[col] = le.fit_transform(X[col].astype(str))  # fit + transform
+            self.label_encoders[col] = le  # save encoder for later use
 
-        self.training_columns = X_encoded.columns.tolist()
+        self.training_columns = X.columns.tolist()
 
-        print(f"  ✅ Features encoded.")
-        return X_encoded
+        print("  ✅ Features label encoded.")
+        return X
