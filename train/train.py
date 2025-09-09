@@ -1,20 +1,23 @@
 import os
 import joblib
 import pandas as pd
+import mlflow
+import mlflow.sklearn
 from sklearn.model_selection import train_test_split
 from sksurv.ensemble import RandomSurvivalForest
+
 from src.preprocessing import DataPreprocessor
 from dbLogic.mongo_utils import load_dataset_from_mongo
+from src.config import MLFLOW_EXPERIMENT_NAME
 
 
 def train_vendor_model(vendor_id: str):
     """
     Train a Random Survival Forest (RSF) model for a given vendor_id.
-    Saves the trained model and appends test data to a consolidated test file.
+    Logs the trained model to MLflow and appends test data to a consolidated test file.
 
     Returns:
-        model_path (str): path to saved RSF model
-        n_rows (int): number of rows used for training
+        model_info (dict): MLflow model URI, run_id, and local path
     """
 
     df = load_dataset_from_mongo()
@@ -29,6 +32,9 @@ def train_vendor_model(vendor_id: str):
 
     print(f"➡️ Training model for vendor_id={vendor_id} | Rows: {len(vendor_df)}")
 
+    # -------------------------
+    # Split train/test
+    # -------------------------
     train_df, test_df = train_test_split(vendor_df, test_size=0.2, random_state=42)
 
     consolidated_test_path = "data/consolidated_test.csv"
@@ -44,8 +50,10 @@ def train_vendor_model(vendor_id: str):
     combined_test.to_csv(consolidated_test_path, index=False)
     print(f"✅ Test data for vendor {vendor_id} added to consolidated test file: {consolidated_test_path}")
 
+    # -------------------------
+    # Preprocess
+    # -------------------------
     preprocessor = DataPreprocessor()
-
     print("➡️ Preprocessing training data...")
     X_train, y_train, _ = preprocessor.preprocess_data(train_df)
 
@@ -53,6 +61,9 @@ def train_vendor_model(vendor_id: str):
     print("➡️ Preprocessing testing data...")
     X_test, y_test, _ = test_preprocessor.preprocess_data(test_df)
 
+    # -------------------------
+    # Train model
+    # -------------------------
     rsf = RandomSurvivalForest(
         n_estimators=100,
         min_samples_split=10,
@@ -65,10 +76,38 @@ def train_vendor_model(vendor_id: str):
     rsf.fit(X_train, y_train)
     print(f"✅ Model trained for vendor {vendor_id}")
 
+    # -------------------------
+    # Save locally
+    # -------------------------
     model_path = f"artifacts/v1/{vendor_id}.joblib"
-    model_dir = os.path.dirname(model_path)
-    os.makedirs(model_dir, exist_ok=True)
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
     joblib.dump(rsf, model_path)
-    print(f"✅ Model saved: {model_path}")
+    print(f"✅ Model saved locally: {model_path}")
 
-    return model_path, len(vendor_df)
+    # -------------------------
+    # Log to MLflow
+    # -------------------------
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+    with mlflow.start_run(run_name=f"train_vendor_{vendor_id}") as run:
+        mlflow.log_param("vendor_id", vendor_id)
+        mlflow.log_param("n_train_rows", len(train_df))
+        mlflow.log_param("n_test_rows", len(test_df))
+        mlflow.log_param("total_rows", len(vendor_df))
+        mlflow.log_param("n_features", X_train.shape[1])
+
+        # Optionally log metrics (simple example)
+        mlflow.log_metric("train_size", len(train_df))
+        mlflow.log_metric("test_size", len(test_df))
+
+        # Log model
+        mlflow.sklearn.log_model(rsf, artifact_path="model")
+
+        print(f"✅ Model logged to MLflow (run_id={run.info.run_id})")
+
+        model_info = {
+            "mlflow_run_id": run.info.run_id,
+            "mlflow_model_uri": f"runs:/{run.info.run_id}/model",
+            "local_model_path": model_path
+        }
+
+    return model_info
