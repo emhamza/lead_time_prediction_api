@@ -17,6 +17,7 @@ def load_dataset_from_mongo(collection_name=DATA_COLLECTION_NAME):
     return df
 
 
+MODEL_ID = "model_v1"
 def save_prediction_to_mongo(
     prediction_results: dict,
     vendor_id: str,
@@ -26,6 +27,7 @@ def save_prediction_to_mongo(
 
     prediction_document = {
         "vendor_id": vendor_id,
+        "model_id": MODEL_ID,
         "prediction": prediction_results,
         "saved_at": datetime.utcnow()
     }
