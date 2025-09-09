@@ -1,13 +1,14 @@
+import os
+from dotenv import load_dotenv
 from pymongo import MongoClient
-import pandas as pd
 
-def load_dataset_from_mongo(
-        uri='mongodb://localhost:27017/',
-        db_name="minted",
-        collection_name="WISMO",
-):
-    client = MongoClient(uri)
-    collection = client[db_name][collection_name]
-    df = pd.DataFrame(list(collection.find({})))
-    df.drop(columns=['_id'], inplace=True)
-    return df
+load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI")
+MONGO_DB = os.getenv("MONGO_DB")
+
+_client = MongoClient(MONGO_URI)
+_db = _client[MONGO_DB]
+
+def get_collection(collection_name: str):
+    return _db[collection_name]

@@ -1,20 +1,33 @@
-from pymongo import MongoClient
 from datetime import datetime
+import pandas as pd
+from .connect import get_collection
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+DATA_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_DATA")
+PRED_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_PRED")
+
+def load_dataset_from_mongo(collection_name=DATA_COLLECTION_NAME):
+    collection = get_collection(collection_name)
+    df = pd.DataFrame(list(collection.find({})))
+    if "_id" in df.columns:
+        df.drop(columns=["_id"], inplace=True)
+    return df
+
 
 def save_prediction_to_mongo(
-        prediction_results: dict,
-        vendor_id:str,
-        uri: str = "mongodb://localhost:27017/",
-        db_name: str = 'minted',
-        collection_name: str = 'WISMOPred_v1'
+    prediction_results: dict,
+    vendor_id: str,
+    collection_name: str = PRED_COLLECTION_NAME
 ):
-    client = MongoClient(uri)
-    collection = client[db_name][collection_name]
+    collection = get_collection(collection_name)
 
     prediction_document = {
         "vendor_id": vendor_id,
         "prediction": prediction_results,
-        "saved_at": datetime.utcnow(),
+        "saved_at": datetime.utcnow()
     }
 
     result = collection.replace_one(
@@ -24,6 +37,6 @@ def save_prediction_to_mongo(
     )
 
     if result.matched_count > 0:
-        print(f"🔄 Existing prediction for vendor {vendor_id} replaced in collection '{collection_name}'.")
+        print(f"🔄 Replaced existing prediction for vendor {vendor_id} in '{collection_name}'")
     else:
-        print(f"🆕 New prediction for vendor {vendor_id} inserted into collection '{collection_name}'.")
+        print(f"🆕 Inserted new prediction for vendor {vendor_id} into '{collection_name}'")

@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sksurv.ensemble import RandomSurvivalForest
 from src.preprocessing import DataPreprocessor
-from dbLogic.connect import load_dataset_from_mongo
+from dbLogic.mongo_utils import load_dataset_from_mongo
 
 
 def train_vendor_model(vendor_id: str):
