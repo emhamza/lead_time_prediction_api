@@ -1,36 +1,125 @@
 import mlflow
 import numpy as np
 import pandas as pd
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from fastapi import HTTPException
+import logging
 
 from src.preprocessing import DataPreprocessor
 from src.load import load_data
 from src.config import TEST_FILE, MLFLOW_EXPERIMENT_NAME
 from dbLogic.mongo_utils import save_prediction_to_mongo, load_predictions_from_mongo
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 def predict_vendor_model(vendor_id: str) -> Dict[str, Any]:
     try:
-        # check for the predictions
-        existing_df = load_predictions_from_mongo(vendor_id)
-        if not existing_df.empty:
-            print(f"🟡 PREDICTION IS ALREADY AVAILABLE for vendor_id={vendor_id}")
-            return {
-                "status": "already_exists",
-                "vendor_id": vendor_id,
-                "message": "Prediction already exists in MongoDB"
-            }
-
+        logger.info(f"Loading test data for vendor_id={vendor_id}")
         df = load_data(TEST_FILE)
         vendor_df = df[df["vendor_id"] == vendor_id].copy()
 
-        # proceed with the prediction logic if not found
+        if vendor_df.empty:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No test data found for vendor_id={vendor_id}"
+            )
+
+        if "PO_ID" not in vendor_df.columns:
+            vendor_df["PO_ID"] = vendor_df.index.astype(str)
+            logger.warning("PO_ID column not found. Using row indices as PO_ID.")
+
+        incoming_po_ids = set(vendor_df["PO_ID"].astype(str).unique())
+        logger.info(f"Found {len(incoming_po_ids)} PO_IDs in incoming data for vendor_id={vendor_id}")
+
+        existing_predictions_df = load_predictions_from_mongo(vendor_id)
+
+        if existing_predictions_df.empty:
+            logger.info(f"🆕 No existing predictions found for vendor_id={vendor_id}. Processing all PO_IDs.")
+            po_ids_to_process = incoming_po_ids
+            prediction_mode = "new_vendor"
+        else:
+            existing_po_ids = set(existing_predictions_df["PO_ID"].astype(str).unique())
+            po_ids_to_process = incoming_po_ids - existing_po_ids
+
+            logger.info(f"📋 Existing predictions found for vendor_id={vendor_id}")
+            logger.info(f"   Existing PO_IDs: {len(existing_po_ids)}")
+            logger.info(f"   Incoming PO_IDs: {len(incoming_po_ids)}")
+            logger.info(f"   New PO_IDs to process: {len(po_ids_to_process)}")
+
+            if not po_ids_to_process:
+                return _create_response(
+                    status="no_new_predictions_needed",
+                    vendor_id=vendor_id,
+                    message=f"All {len(incoming_po_ids)} PO_IDs already have predictions",
+                    metadata={
+                        "existing_po_count": len(existing_po_ids),
+                        "incoming_po_count": len(incoming_po_ids),
+                        "new_po_count": 0
+                    }
+                )
+
+            prediction_mode = "append_to_existing"
+
+        vendor_df_filtered = vendor_df[vendor_df["PO_ID"].isin(po_ids_to_process)].copy()
+
+        logger.info(f"🔄 Processing {len(vendor_df_filtered)} records for vendor_id={vendor_id}")
+
+        model = _load_vendor_model(vendor_id)
+
+        new_predictions = _generate_predictions(vendor_df_filtered, model)
+
+        summary = _create_summary_statistics(vendor_id, new_predictions, model.unique_times_)
+
+        prediction_result = {
+            "predictions": new_predictions,
+            "summary": summary,
+            "metadata": {
+                "prediction_timestamp": pd.Timestamp.now().isoformat(),
+                "prediction_mode": prediction_mode,
+                "new_predictions_count": len(new_predictions),
+                "existing_predictions_count": len(existing_predictions_df) if not existing_predictions_df.empty else 0,
+                "total_po_ids_after_update": len(new_predictions) + (
+                    len(existing_predictions_df) if not existing_predictions_df.empty else 0)
+            }
+        }
+
+        save_prediction_to_mongo(prediction_result, vendor_id)
+
+        logger.info(
+            f"✅ Successfully generated and saved {len(new_predictions)} new predictions for vendor_id={vendor_id}")
+
+        return _create_response(
+            status="success",
+            vendor_id=vendor_id,
+            message=f"Generated predictions for {len(new_predictions)} new PO_IDs",
+            predictions=new_predictions,
+            summary=summary,
+            metadata=prediction_result["metadata"]
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Prediction error for vendor_id={vendor_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prediction failed for vendor_id={vendor_id}: {str(e)}"
+        )
+
+
+def _load_vendor_model(vendor_id: str):
+    """Load the most recent trained model for the specified vendor."""
+    try:
         client = mlflow.tracking.MlflowClient()
         experiment = client.get_experiment_by_name(MLFLOW_EXPERIMENT_NAME)
 
         if experiment is None:
-            raise HTTPException(status_code=404, detail=f"Experiment '{MLFLOW_EXPERIMENT_NAME}' not found in MLflow")
+            raise HTTPException(
+                status_code=404,
+                detail=f"MLflow experiment '{MLFLOW_EXPERIMENT_NAME}' not found"
+            )
 
         runs = client.search_runs(
             experiment_ids=[experiment.experiment_id],
@@ -40,116 +129,138 @@ def predict_vendor_model(vendor_id: str) -> Dict[str, Any]:
         )
 
         if not runs:
-            raise HTTPException(status_code=404, detail=f"No MLflow run found for vendor_id={vendor_id}")
+            raise HTTPException(
+                status_code=404,
+                detail=f"No trained model found for vendor_id={vendor_id}"
+            )
 
         run = runs[0]
         run_id = run.info.run_id
         model_uri = f"runs:/{run_id}/model"
 
-        print(f"➡️ Loading model from MLflow (run_id={run_id}, vendor_id={vendor_id})")
+        logger.info(f"📦 Loading model from MLflow (run_id={run_id[:8]}...)")
         model = mlflow.sklearn.load_model(model_uri)
 
-        if vendor_df.empty:
-            raise HTTPException(status_code=404, detail=f"No test data found for vendor_id={vendor_id}")
+        model._mlflow_run_id = run_id
 
-        if "PO_ID" not in vendor_df.columns:
-            vendor_df["PO_ID"] = vendor_df.index.astype(str)
-            print("⚠️ Warning: PO_ID column not found. Using row indices as PO_ID.")
+        return model
 
-        print(f"➡️ Making predictions for vendor_id={vendor_id} | Test samples: {len(vendor_df)}")
+    except Exception as e:
+        logger.error(f"Failed to load model for vendor_id={vendor_id}: {str(e)}")
+        raise
 
+
+def _generate_predictions(vendor_df: pd.DataFrame, model) -> List[Dict[str, Any]]:
+    try:
         preprocessor = DataPreprocessor()
         X, y, processed_df = preprocessor.preprocess_data(vendor_df)
 
-        print(f"➡️ Preprocessed features shape: {X.shape}")
+        logger.info(f"📊 Preprocessed features shape: {X.shape}")
 
-        print("➡️ Generating survival predictions...")
+        logger.info("🔮 Generating survival predictions...")
         survival_functions = model.predict_survival_function(X)
         event_times = model.unique_times_
 
         predictions = []
-        for survival_fn, po_id in zip(survival_functions, vendor_df["PO_ID"]):
-            survival_probs = survival_fn(event_times)
+        for idx, (survival_fn, po_id) in enumerate(zip(survival_functions, vendor_df["PO_ID"])):
+            try:
+                survival_probs = survival_fn(event_times)
 
-            p50_time = calculate_percentile_survival_time(event_times, survival_probs, 0.5)
-            p90_time = calculate_percentile_survival_time(event_times, survival_probs, 0.1)
+                p50_time = _calculate_percentile_survival_time(event_times, survival_probs, 0.5)
+                p90_time = _calculate_percentile_survival_time(event_times, survival_probs, 0.1)
 
-            survival_curve = [
-                {"time": float(time), "survival_probability": round(float(prob), 2)}
-                for time, prob in zip(event_times, survival_probs)
-            ]
+                survival_curve = [
+                    {"time": float(time), "survival_probability": round(float(prob), 2)}
+                    for time, prob in zip(event_times, survival_probs)
+                ]
 
-            prediction_row = {
-                "PO_ID": str(po_id),
-                "p50_survival_time": p50_time,
-                "p90_survival_time": p90_time,
-                "survival_curve": survival_curve,
-                "risk_score": float(1 - survival_probs[-1]) if len(survival_probs) > 0 else None,
-                "model_version": "v1",
-                "model_id": run_id
-            }
-            predictions.append(prediction_row)
+                risk_score = float(1 - survival_probs[-1]) if len(survival_probs) > 0 else None
 
-        p50_times = [p["p50_survival_time"] for p in predictions if p["p50_survival_time"] is not None]
-        p90_times = [p["p90_survival_time"] for p in predictions if p["p90_survival_time"] is not None]
+                prediction_row = {
+                    "PO_ID": str(po_id),
+                    "p50_survival_time": p50_time,
+                    "p90_survival_time": p90_time,
+                    "survival_curve": survival_curve,
+                    "risk_score": risk_score,
+                    "model_version": "v1",
+                    "model_id": getattr(model, '_mlflow_run_id', 'unknown')
+                }
+                predictions.append(prediction_row)
 
-        summary = {
-            "vendor_id": vendor_id,
-            "total_predictions": len(predictions),
-            "p50_statistics": {
-                "mean": float(np.mean(p50_times)) if p50_times else None,
-                "median": float(np.median(p50_times)) if p50_times else None,
-                "std": float(np.std(p50_times)) if p50_times else None,
-                "min": float(np.min(p50_times)) if p50_times else None,
-                "max": float(np.max(p50_times)) if p50_times else None,
-            },
-            "p90_statistics": {
-                "mean": float(np.mean(p90_times)) if p90_times else None,
-                "median": float(np.median(p90_times)) if p90_times else None,
-                "std": float(np.std(p90_times)) if p90_times else None,
-                "min": float(np.min(p90_times)) if p90_times else None,
-                "max": float(np.max(p90_times)) if p90_times else None,
-            },
-            "event_time_range": {
-                "min_time": float(event_times.min()),
-                "max_time": float(event_times.max()),
-            },
-        }
+            except Exception as e:
+                logger.error(f"Error processing PO_ID {po_id}: {str(e)}")
+                continue
 
-        prediction_result = {
-            "predictions": predictions,
-            "summary": summary,
-            "metadata": {
-                "prediction_timestamp": pd.Timestamp.now().isoformat(),
-                "n_features": X.shape[1],
-                "n_time_points": len(event_times),
-            },
-        }
+        logger.info(f"✅ Generated {len(predictions)} predictions successfully")
+        return predictions
 
-        save_prediction_to_mongo(prediction_result, vendor_id)
-        print(f"✅ Predictions completed and saved for vendor_id={vendor_id}")
-        print(f"✅ Generated predictions for {len(predictions)} records")
-
-        return {
-            "predictions": predictions,
-            "summary": summary,
-            "status": "success",
-        }
-
-    except HTTPException:
-        raise
     except Exception as e:
-        print(f"❌ Prediction error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+        logger.error(f"Failed to generate predictions: {str(e)}")
+        raise
 
 
-def calculate_percentile_survival_time(event_times: np.ndarray, survival_probs: np.ndarray, target_probability: float) -> float:
-    """Calculate the time at which survival probability reaches the target percentile."""
+def _calculate_percentile_survival_time(event_times: np.ndarray, survival_probs: np.ndarray,
+                                        target_probability: float) -> Optional[float]:
     try:
         idx = np.where(survival_probs <= target_probability)[0]
         if len(idx) == 0:
             return None
         return float(event_times[idx[0]])
     except Exception as e:
-        print(f"Warning: Could not calculate percentile survival time: {e}")
+        logger.warning(f"Could not calculate percentile survival time: {e}")
         return None
+
+
+def _create_summary_statistics(vendor_id: str, predictions: List[Dict[str, Any]], event_times: np.ndarray) -> Dict[
+    str, Any]:
+    try:
+        p50_times = [p["p50_survival_time"] for p in predictions if p["p50_survival_time"] is not None]
+        p90_times = [p["p90_survival_time"] for p in predictions if p["p90_survival_time"] is not None]
+        risk_scores = [p["risk_score"] for p in predictions if p["risk_score"] is not None]
+
+        return {
+            "vendor_id": vendor_id,
+            "total_predictions": len(predictions),
+            "p50_statistics": _calculate_stats(p50_times),
+            "p90_statistics": _calculate_stats(p90_times),
+            "risk_score_statistics": _calculate_stats(risk_scores),
+            "event_time_range": {
+                "min_time": float(event_times.min()) if len(event_times) > 0 else None,
+                "max_time": float(event_times.max()) if len(event_times) > 0 else None,
+                "time_points": len(event_times)
+            }
+        }
+    except Exception as e:
+        return {"vendor_id": vendor_id, "total_predictions": len(predictions), "error": str(e)}
+
+
+def _calculate_stats(values: List[float]) -> Dict[str, Optional[float]]:
+    if not values:
+        return {
+            "count": 0,
+            "mean": None,
+            "median": None,
+            "std": None,
+            "min": None,
+            "max": None
+        }
+
+    return {
+        "count": len(values),
+        "mean": float(np.mean(values)),
+        "median": float(np.median(values)),
+        "std": float(np.std(values)),
+        "min": float(np.min(values)),
+        "max": float(np.max(values))
+    }
+
+
+def _create_response(status: str, vendor_id: str, message: str, **kwargs) -> Dict[str, Any]:
+    response = {
+        "status": status,
+        "vendor_id": vendor_id,
+        "message": message,
+        "timestamp": pd.Timestamp.now().isoformat()
+    }
+    response.update(kwargs)
+    return response
