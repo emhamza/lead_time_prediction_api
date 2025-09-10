@@ -7,11 +7,22 @@ from fastapi import HTTPException
 from src.preprocessing import DataPreprocessor
 from src.load import load_data
 from src.config import TEST_FILE, MLFLOW_EXPERIMENT_NAME
-from dbLogic.mongo_utils import save_prediction_to_mongo
+from dbLogic.mongo_utils import save_prediction_to_mongo, load_predictions_from_mongo
 
 
 def predict_vendor_model(vendor_id: str) -> Dict[str, Any]:
     try:
+        # check for the predictions
+        existing_df = load_predictions_from_mongo()
+        if not existing_df.empty and vendor_id in existing_df["vendor_id"].unique():
+            print(f"🟡 PREDICTION IS ALREADY AVAILABLE for vendor_id={vendor_id}")
+            return {
+                "status": "already_exists",
+                "vendor_id": vendor_id,
+                "message": "Prediction already exists in MongoDB"
+            }
+
+        # proceed with the prediction logic if not found
         client = mlflow.tracking.MlflowClient()
         experiment = client.get_experiment_by_name(MLFLOW_EXPERIMENT_NAME)
 
