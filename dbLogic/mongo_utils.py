@@ -34,3 +34,33 @@ def save_prediction_to_mongo(
         print(f"🔄 Replaced existing prediction for vendor {vendor_id} in '{collection_name}'")
     else:
         print(f"🆕 Inserted new prediction for vendor {vendor_id} into '{collection_name}'")
+
+def load_predictions_from_mongo(
+    vendor_id: str,
+    collection_name: str = PRED_COLLECTION_NAME
+) -> pd.DataFrame:
+    collection = get_collection(collection_name)
+    document = collection.find_one({"vendor_id": vendor_id})
+
+    if not document:
+        return pd.DataFrame()  # No predictions found for this vendor
+
+    saved_at = document.get("saved_at")
+    prediction_list = document.get("prediction", {}).get("predictions", [])
+
+    records = []
+    for pred in prediction_list:
+        record = {
+            "vendor_id": vendor_id,
+            "saved_at": saved_at,
+            "PO_ID": pred.get("PO_ID"),
+            "p50_survival_time": pred.get("p50_survival_time"),
+            "p90_survival_time": pred.get("p90_survival_time"),
+            "risk_score": pred.get("risk_score"),
+            "model_version": pred.get("model_version"),
+            "model_id": pred.get("model_id"),
+            "survival_curve": pred.get("survival_curve")
+        }
+        records.append(record)
+
+    return pd.DataFrame(records)
