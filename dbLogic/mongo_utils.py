@@ -18,22 +18,31 @@ def save_prediction_to_mongo(
 ):
     collection = get_collection(collection_name)
 
-    prediction_document = {
-        "vendor_id": vendor_id,
-        "prediction": prediction_results,
-        "saved_at": datetime.utcnow()
-    }
+    existing_doc = collection.find_one({"vendor_id": vendor_id})
+    new_predictions = prediction_results.get("predictions", [])
 
-    result = collection.replace_one(
-        {"vendor_id": vendor_id},
-        prediction_document,
-        upsert=True
-    )
+    if existing_doc:
+        existing_predictions = existing_doc.get("prediction", {}).get("predictions", [])
+        merged_predictions = existing_predictions + new_predictions
 
-    if result.matched_count > 0:
-        print(f"🔄 Replaced existing prediction for vendor {vendor_id} in '{collection_name}'")
+        updated_document = {
+            "vendor_id": vendor_id,
+            "prediction": {"predictions": merged_predictions},
+            "saved_at": datetime.utcnow()
+        }
+
+        result = collection.replace_one({"vendor_id": vendor_id}, updated_document)
+        print(f"🔄 Appended {len(new_predictions)} new predictions for vendor {vendor_id} in '{collection_name}'")
+
     else:
-        print(f"🆕 Inserted new prediction for vendor {vendor_id} into '{collection_name}'")
+        prediction_document = {
+            "vendor_id": vendor_id,
+            "prediction": {"predictions": new_predictions},
+            "saved_at": datetime.utcnow()
+        }
+
+        collection.insert_one(prediction_document)
+        print(f"🆕 Inserted new prediction document for vendor {vendor_id} into '{collection_name}'")
 
 def load_predictions_from_mongo(
     vendor_id: str,
@@ -43,7 +52,7 @@ def load_predictions_from_mongo(
     document = collection.find_one({"vendor_id": vendor_id})
 
     if not document:
-        return pd.DataFrame()  # No predictions found for this vendor
+        return pd.DataFrame()
 
     saved_at = document.get("saved_at")
     prediction_list = document.get("prediction", {}).get("predictions", [])
