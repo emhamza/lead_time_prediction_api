@@ -16,6 +16,11 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
+### Run MLFlow UI
+```bash
+mlflow ui --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./artifacts
+```
+
 **API Access:**
 - Swagger Docs: http://127.0.0.1:8000/docs
 - Root Endpoint: http://127.0.0.1:8000/
