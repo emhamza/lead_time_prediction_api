@@ -21,7 +21,7 @@ async def login(form_data: LoginRequest):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    access_token_expires = timedelta(minutes=30)
+    access_token_expires = timedelta(hours=2)
     access_token = create_access_token(
         data={"sub": user["username"]}, expires_delta=access_token_expires
     )
