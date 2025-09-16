@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 import time
+
+from predict.prediction_lookup import  get_prediction_by_po_id
 from train.train import train_vendor_model
 from src.auth import get_current_user
 from src.auth import authenticate_user, create_access_token
@@ -19,7 +21,7 @@ async def login(form_data: LoginRequest):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    access_token_expires = timedelta(minutes=30)
+    access_token_expires = timedelta(hours=2)
     access_token = create_access_token(
         data={"sub": user["username"]}, expires_delta=access_token_expires
     )
@@ -51,8 +53,6 @@ async def train_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
 
 
-
-
 @router.post("/pred/{vendor_id}")
 async def predict_vendor(vendor_id: str, user:dict = Depends(get_current_user)):
     """
@@ -66,3 +66,14 @@ async def predict_vendor(vendor_id: str, user:dict = Depends(get_current_user)):
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
+
+@router.post("/prediction/{po_id}")
+async def get_prediction_by_po(po_id: str, user:dict = Depends(get_current_user)):
+    try:
+        result = get_prediction_by_po_id(po_id)
+        return {"status": "success", **result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch prediction: {str(e)}")
