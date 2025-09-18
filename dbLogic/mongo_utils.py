@@ -6,8 +6,11 @@ from src.config import DATA_COLLECTION_NAME, PRED_COLLECTION_NAME
 def load_dataset_from_mongo(collection_name=DATA_COLLECTION_NAME):
     collection = get_collection(collection_name)
     df = pd.DataFrame(list(collection.find({})))
+
     if "_id" in df.columns:
         df.drop(columns=["_id"], inplace=True)
+    print("📦 Loaded DataFrame preview:")
+    print(df.head())
     return df
 
 
@@ -62,7 +65,7 @@ def load_predictions_from_mongo(
         record = {
             "vendor_id": vendor_id,
             "saved_at": saved_at,
-            "PO_ID": pred.get("PO_ID"),
+            "po_id": pred.get("po_id"),
             "p50_survival_time": pred.get("p50_survival_time"),
             "p90_survival_time": pred.get("p90_survival_time"),
             "risk_score": pred.get("risk_score"),

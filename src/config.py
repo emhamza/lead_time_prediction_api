@@ -31,15 +31,17 @@ TEST_SIZE = 0.2
 RANDOM_STATE = 42
 
 FEATURES = [
-    "Order_Quantity", "Order_Volume", "Order_Weight", "Priority_Flag",
-    "Fulfiller_ID", "Routing_Lane_ID", "Fulfiller_Throughput", "Total_Backlog_Ack",
-    "Current_Backlog", "Relative_Queue_Position", "Estimated_Processing_Rate",
-    "Days_in_Queue", "Day_of_Week", "Day_of_Month", "Month", "Season",
-    "Peak_Season", "Demand_Surge", "Recent_Shipments", "Lead_Time_Trend",
-    "Geography", "Carrier", "Product_Category", "Order_Creation_Day",
-    "Order_Creation_Month", "Order_Creation_Year", "Acknowledgement_Day",
-    "Acknowledgement_Month", "Acknowledgement_Year", "Time_to_Acknowledge",
-    "is_low_lead_time"
+    'fulfiller_id',
+    'po_id',
+    'total_orders',
+    'routing_lane_id',
+    'fast_track_orders',
+    'delivered',
+    'ship_method',
+    'lead_time_days',
+    'is_working',
+    'total_items',
+    'is_delivered'  # New feature for the event
 ]
 
 

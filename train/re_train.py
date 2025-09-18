@@ -12,15 +12,15 @@ from src.config import MLFLOW_EXPERIMENT_NAME
 
 
 def retrain_vendor_model(
-    vendor_id: str,
-    custom_params: Optional[Dict[str, Any]] = None
+    vendor_id: int,
+    custom_params: Optional[Dict[int, Any]] = None
 ):
 
     df = load_dataset_from_mongo()
-    if "vendor_id" not in df.columns:
-        raise ValueError("Dataset does not contain 'vendor_id' column. Please check preprocessing step.")
+    if "fulfiller_id" not in df.columns:
+        raise ValueError("Dataset does not contain 'fulfiller_id' column. Please check preprocessing step.")
 
-    vendor_df = df[df["vendor_id"] == vendor_id].copy()
+    vendor_df = df[df["fulfiller_id"] == vendor_id].copy()
     if vendor_df.empty:
         raise ValueError(f"No data found for vendor_id={vendor_id}")
 
@@ -33,7 +33,7 @@ def retrain_vendor_model(
 
     if os.path.exists(consolidated_test_path):
         existing_test = pd.read_csv(consolidated_test_path)
-        existing_test = existing_test[existing_test["vendor_id"] != vendor_id]
+        existing_test = existing_test[existing_test["fulfiller_id"] != vendor_id]
         combined_test = pd.concat([existing_test, test_df], ignore_index=True)
     else:
         combined_test = test_df

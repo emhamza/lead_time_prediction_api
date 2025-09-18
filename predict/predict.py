@@ -14,11 +14,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def predict_vendor_model(vendor_id: str) -> Dict[str, Any]:
+def predict_vendor_model(vendor_id: int) -> Dict[int, Any]:
     try:
         logger.info(f"Loading test data for vendor_id={vendor_id}")
         df = load_data(TEST_FILE)
-        vendor_df = df[df["vendor_id"] == vendor_id].copy()
+        vendor_df = df[df["fulfiller_id"] == vendor_id].copy()
 
         if vendor_df.empty:
             raise HTTPException(
@@ -26,33 +26,33 @@ def predict_vendor_model(vendor_id: str) -> Dict[str, Any]:
                 detail=f"No test data found for vendor_id={vendor_id}"
             )
 
-        if "PO_ID" not in vendor_df.columns:
-            vendor_df["PO_ID"] = vendor_df.index.astype(str)
-            logger.warning("PO_ID column not found. Using row indices as PO_ID.")
+        if "po_id" not in vendor_df.columns:
+            vendor_df["po_id"] = vendor_df.index.astype(int)
+            logger.warning("po_id column not found. Using row indices as po_id.")
 
-        incoming_po_ids = set(vendor_df["PO_ID"].astype(str).unique())
-        logger.info(f"Found {len(incoming_po_ids)} PO_IDs in incoming data for vendor_id={vendor_id}")
+        incoming_po_ids = set(vendor_df["po_id"].astype(int).unique())
+        logger.info(f"Found {len(incoming_po_ids)} po_ids in incoming data for vendor_id={vendor_id}")
 
         existing_predictions_df = load_predictions_from_mongo(vendor_id)
 
         if existing_predictions_df.empty:
-            logger.info(f"🆕 No existing predictions found for vendor_id={vendor_id}. Processing all PO_IDs.")
+            logger.info(f"🆕 No existing predictions found for vendor_id={vendor_id}. Processing all po_ids.")
             po_ids_to_process = incoming_po_ids
             prediction_mode = "new_vendor"
         else:
-            existing_po_ids = set(existing_predictions_df["PO_ID"].astype(str).unique())
+            existing_po_ids = set(existing_predictions_df["po_id"].astype(int).unique())
             po_ids_to_process = incoming_po_ids - existing_po_ids
 
             logger.info(f"📋 Existing predictions found for vendor_id={vendor_id}")
-            logger.info(f"   Existing PO_IDs: {len(existing_po_ids)}")
-            logger.info(f"   Incoming PO_IDs: {len(incoming_po_ids)}")
-            logger.info(f"   New PO_IDs to process: {len(po_ids_to_process)}")
+            logger.info(f"   Existing po_ids: {len(existing_po_ids)}")
+            logger.info(f"   Incoming po_ids: {len(incoming_po_ids)}")
+            logger.info(f"   New po_ids to process: {len(po_ids_to_process)}")
 
             if not po_ids_to_process:
                 return _create_response(
                     status="no_new_predictions_needed",
                     vendor_id=vendor_id,
-                    message=f"All {len(incoming_po_ids)} PO_IDs already have predictions",
+                    message=f"All {len(incoming_po_ids)} po_ids already have predictions",
                     metadata={
                         "existing_po_count": len(existing_po_ids),
                         "incoming_po_count": len(incoming_po_ids),
@@ -62,7 +62,7 @@ def predict_vendor_model(vendor_id: str) -> Dict[str, Any]:
 
             prediction_mode = "append_to_existing"
 
-        vendor_df_filtered = vendor_df[vendor_df["PO_ID"].isin(po_ids_to_process)].copy()
+        vendor_df_filtered = vendor_df[vendor_df["po_id"].isin(po_ids_to_process)].copy()
 
         logger.info(f"🔄 Processing {len(vendor_df_filtered)} records for vendor_id={vendor_id}")
 
@@ -93,7 +93,7 @@ def predict_vendor_model(vendor_id: str) -> Dict[str, Any]:
         return _create_response(
             status="success",
             vendor_id=vendor_id,
-            message=f"Generated predictions for {len(new_predictions)} new PO_IDs",
+            message=f"Generated predictions for {len(new_predictions)} new po_ids",
             predictions=new_predictions,
             summary=summary,
             metadata=prediction_result["metadata"]
@@ -109,7 +109,7 @@ def predict_vendor_model(vendor_id: str) -> Dict[str, Any]:
         )
 
 
-def _load_vendor_model(vendor_id: str):
+def _load_vendor_model(vendor_id: int):
     """Load the most recent trained model for the specified vendor."""
     try:
         client = mlflow.tracking.MlflowClient()
@@ -146,11 +146,11 @@ def _load_vendor_model(vendor_id: str):
         return model
 
     except Exception as e:
-        logger.error(f"Failed to load model for vendor_id={vendor_id}: {str(e)}")
+        logger.error(f"Failed to load model for vendor_id={vendor_id}: {int(e)}")
         raise
 
 
-def _generate_predictions(vendor_df: pd.DataFrame, model) -> List[Dict[str, Any]]:
+def _generate_predictions(vendor_df: pd.DataFrame, model) -> List[Dict[int, Any]]:
     try:
         preprocessor = DataPreprocessor()
         X, y, processed_df = preprocessor.preprocess_data(vendor_df)
@@ -162,7 +162,7 @@ def _generate_predictions(vendor_df: pd.DataFrame, model) -> List[Dict[str, Any]
         event_times = model.unique_times_
 
         predictions = []
-        for idx, (survival_fn, po_id) in enumerate(zip(survival_functions, vendor_df["PO_ID"])):
+        for idx, (survival_fn, po_id) in enumerate(zip(survival_functions, vendor_df["po_id"])):
             try:
                 survival_probs = survival_fn(event_times)
 
@@ -177,7 +177,7 @@ def _generate_predictions(vendor_df: pd.DataFrame, model) -> List[Dict[str, Any]
                 risk_score = float(1 - survival_probs[-1]) if len(survival_probs) > 0 else None
 
                 prediction_row = {
-                    "PO_ID": str(po_id),
+                    "po_id": str(po_id),
                     "p50_survival_time": p50_time,
                     "p90_survival_time": p90_time,
                     "survival_curve": survival_curve,
@@ -188,7 +188,7 @@ def _generate_predictions(vendor_df: pd.DataFrame, model) -> List[Dict[str, Any]
                 predictions.append(prediction_row)
 
             except Exception as e:
-                logger.error(f"Error processing PO_ID {po_id}: {str(e)}")
+                logger.error(f"Error processing po_id {po_id}: {str(e)}")
                 continue
 
         logger.info(f"✅ Generated {len(predictions)} predictions successfully")
@@ -255,7 +255,7 @@ def _calculate_stats(values: List[float]) -> Dict[str, Optional[float]]:
     }
 
 
-def _create_response(status: str, vendor_id: str, message: str, **kwargs) -> Dict[str, Any]:
+def _create_response(status: str, vendor_id: int, message: str, **kwargs) -> Dict[str, Any]:
     response = {
         "status": status,
         "vendor_id": vendor_id,
