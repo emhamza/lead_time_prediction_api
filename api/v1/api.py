@@ -2,12 +2,15 @@ from fastapi import APIRouter, HTTPException, Depends
 import time
 
 from predict.prediction_lookup import  get_prediction_by_po_id
+from train.re_train import retrain_vendor_model
 from train.train import train_vendor_model
 from src.auth import get_current_user
 from src.auth import authenticate_user, create_access_token
 from datetime import timedelta
 from src.schemas import TokenResponse, LoginRequest
 from predict.predict import predict_vendor_model
+from pydantic import BaseModel
+from typing import Optional
 
 router=APIRouter()
 
@@ -77,3 +80,35 @@ async def get_prediction_by_po(po_id: str, user:dict = Depends(get_current_user)
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch prediction: {str(e)}")
+
+
+
+class RetrainParams(BaseModel):
+    n_estimators: Optional[int] = 200
+    min_samples_split: Optional[int] = 10
+    min_samples_leaf: Optional[int] = 15
+    max_features: Optional[str] = None
+    random_state: Optional[int] = 42
+
+@router.post("/re-train/{vendor_id}")
+async def retrain_vendor(vendor_id: str, params: RetrainParams, user: dict = Depends(get_current_user)):
+    start_time = time.time()
+    try:
+        custom_params = {k: v for k, v in params.dict().items() if v is not None}
+
+        model_info = retrain_vendor_model(vendor_id, custom_params=custom_params)
+
+        processing_time = time.time() - start_time
+        return {
+            "status": "success",
+            "vendor_id": vendor_id,
+            "mlflow_run_id": model_info["mlflow_run_id"],
+            "mlflow_model_uri": model_info["mlflow_model_uri"],
+            "processing_time": processing_time,
+            "message": f"Re-training completed for vendor {vendor_id} with parameters {custom_params}"
+        }
+
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Retraining failed: {str(e)}")
