@@ -32,7 +32,7 @@ async def login(form_data: LoginRequest):
 
 
 @router.post("/train/{vendor_id}")
-async def train_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
+async def train_vendor(vendor_id: int, user: dict = Depends(get_current_user)):
     """
     Train a survival model for a specific vendor_id.
     Saves the trained model and training columns.
@@ -57,7 +57,7 @@ async def train_vendor(vendor_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/pred/{vendor_id}")
-async def predict_vendor(vendor_id: str, user:dict = Depends(get_current_user)):
+async def predict_vendor(vendor_id: int, user:dict = Depends(get_current_user)):
     """
         Predict survival probabilities for a specific vendor_id.
         Saves predictions in predictions/v1/{vendor_id}.json
@@ -72,7 +72,7 @@ async def predict_vendor(vendor_id: str, user:dict = Depends(get_current_user)):
 
 
 @router.post("/prediction/{po_id}")
-async def get_prediction_by_po(po_id: str, user:dict = Depends(get_current_user)):
+async def get_prediction_by_po(po_id: int, user:dict = Depends(get_current_user)):
     try:
         result = get_prediction_by_po_id(po_id)
         return {"status": "success", **result}
@@ -91,7 +91,7 @@ class RetrainParams(BaseModel):
     random_state: Optional[int] = 42
 
 @router.post("/re-train/{vendor_id}")
-async def retrain_vendor(vendor_id: str, params: RetrainParams, user: dict = Depends(get_current_user)):
+async def retrain_vendor(vendor_id: int, params: RetrainParams, user: dict = Depends(get_current_user)):
     start_time = time.time()
     try:
         custom_params = {k: v for k, v in params.dict().items() if v is not None}

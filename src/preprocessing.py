@@ -30,16 +30,11 @@ class DataPreprocessor:
     def _process_datetime_features(self, df):
         """Process datetime features."""
         print("  ➡️  Processing datetime columns...")
-        df['Order_Creation_DateTime'] = pd.to_datetime(df['Order_Creation_DateTime'])
-        df['Acknowledgement_DateTime'] = pd.to_datetime(df['Acknowledgement_DateTime'])
+        df['Fulfiller_Acknowledgement_DateTime'] = pd.to_datetime(df['fulfiller_ack_date'])
 
-        df['Order_Creation_Day'] = df['Order_Creation_DateTime'].dt.day
-        df['Order_Creation_Month'] = df['Order_Creation_DateTime'].dt.month
-        df['Order_Creation_Year'] = df['Order_Creation_DateTime'].dt.year
-
-        df['Acknowledgement_Day'] = df['Acknowledgement_DateTime'].dt.day
-        df['Acknowledgement_Month'] = df['Acknowledgement_DateTime'].dt.month
-        df['Acknowledgement_Year'] = df['Acknowledgement_DateTime'].dt.year
+        df['Fulfiller_Acknowledgement_Day'] = df['Fulfiller_Acknowledgement_DateTime'].dt.day
+        df['Fulfiller_Acknowledgement_Month'] = df['Fulfiller_Acknowledgement_DateTime'].dt.month
+        df['Fulfiller_Acknowledgement_Year'] = df['Fulfiller_Acknowledgement_DateTime'].dt.year
 
         print("  ✅ Datetime processing complete.")
         return df
@@ -48,27 +43,22 @@ class DataPreprocessor:
         """Create derived features."""
         print("  ➡️  Creating derived features...")
 
-        df['Time_to_Acknowledge'] = (
-            df['Acknowledgement_DateTime'] - df['Order_Creation_DateTime']
-        ).dt.days
-
-        df['is_low_lead_time'] = (df['Lead_Time'] <= 4.5).astype(int)
-
-        df['Censoring_Time'] = df['Lead_Time'].fillna(
-            (CUTOFF_DATE - df['Order_Creation_DateTime']).dt.days
-        )
+        df['is_delivered'] = (df['delivered'] > 0).astype(int)
 
         print("  ✅ Derived features created.")
         return df
 
     def _create_survival_target(self, df):
         """Create survival analysis target array (structured dtype)."""
-        event_mask = df['Lead_Time'].notna()
-        observed_time = df['Censoring_Time']
+        print("  ➡️  Creating survival target array...")
 
-        y = Surv.from_arrays(event=event_mask.astype(bool),
-                             time=observed_time.astype(float))
+        # 'is_delivered' is the event, 1 for delivery, 0 for censored.
+        event_mask = (df['is_delivered'] == 1).astype(bool)
 
+        # 'lead_time_days' is the observed time to the event or censoring.
+        observed_time = df['lead_time_days']
+
+        y = Surv.from_arrays(event=event_mask, time=observed_time.astype(float))
         print("  ✅ Survival target array created.")
         return y
 
